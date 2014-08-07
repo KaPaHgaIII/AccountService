@@ -15,8 +15,10 @@ import java.util.Map;
 public class Service implements AccountService {
     Map<Integer, Long> data = new HashMap<Integer, Long>();
     final Registry registry;
+    private int requestsCount = 0;
 
     public Service() throws RemoteException, AlreadyBoundException {
+        System.setProperty("java.rmi.server.hostname", Config.HOST_IP);
         registry = LocateRegistry.createRegistry(Config.PORT);
         Remote stub = UnicastRemoteObject.exportObject(this, 0);
         registry.bind(Config.BINDING_NAME, stub);
@@ -24,6 +26,7 @@ public class Service implements AccountService {
 
     @Override
     public Long getAmount(Integer id) throws RemoteException {
+        requestsCount++;
         if (data.containsKey(id)) {
             return data.get(id);
         } else {
@@ -33,6 +36,7 @@ public class Service implements AccountService {
 
     @Override
     public void addAmount(Integer id, Long value) throws RemoteException {
+        requestsCount++;
         if (data.containsKey(id)) {
             data.put(id, data.get(id) + value);
         } else {
@@ -41,7 +45,6 @@ public class Service implements AccountService {
     }
 
     public void run() throws Exception {
-        System.setProperty("java.rmi.server.hostname", Config.HOST_IP);
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         while (true) {
@@ -52,6 +55,8 @@ public class Service implements AccountService {
                     break;
                 } else if (s.equals("print")) {
                     System.out.println(data);
+                } else if (s.equals("how much?")) {
+                    System.out.println(requestsCount);
                 }
             } catch (IOException e) {
                 break;

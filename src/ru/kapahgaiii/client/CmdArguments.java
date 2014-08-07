@@ -6,31 +6,28 @@ import java.io.Serializable;
 
 public class CmdArguments implements Serializable {
 
-    @Option(name = "--gender", usage = "Choose required gender")
-    private String gender = "Both";
+    @Option(name = "-rCount", usage = "Reader threads count")
+    private int rCount = 0;
 
-    @Option(name = "--length", usage = "Choose required name length")
-    private byte length = 5;
+    @Option(name = "-wCount", usage = "Writer threads count")
+    private int wCount = 0;
 
-    @Option(name = "--count", usage = "How much names do we need")
-    private int count = 5;
+    @Option(name = "-idList", usage = "Id's range")
+    private String idListString = "";
+    private int[] idList = null;
 
-    public Genders getGender() {
-        switch (Character.toLowerCase(gender.charAt(0))) {
-            case 'm':
-                return Genders.MALE;
-            case 'f':
-                return Genders.FEMALE;
-            default:
-                return Genders.BOTH;
+    public int getrCount() {
+        return rCount;
+    }
+
+    public int getwCount() {
+        return wCount;
+    }
+
+    public int[] getIdList() throws NumberFormatException {
+        if(idList==null){
+            idList = Instruments.stringToArray(idListString);
         }
-    }
-
-    public byte getLength() {
-        return length;
-    }
-
-    public int getCount() {
-        return count;
+        return idList;
     }
 }

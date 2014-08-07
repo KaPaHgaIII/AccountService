@@ -7,7 +7,7 @@ public class Instruments {
 
     /*
     * метод принимает строку вида "1-3,5,7,9-15,8" + возможно всякие
-    * удаляёт из неё все лишние символы, оставляет только цифры, запятые и дефисы
+    * проверяет на неправильные символы и в случае чего бросает NumberFormatException
     * удаляет все лишние запятые и дефисы с конца строки
     * удаляет незаконченные диапазоны 1,2-,6
     * добавляет в конец запятую как символ окончания строки
@@ -24,8 +24,11 @@ public class Instruments {
     * после того, как кончилась строка сет преобразуется в массив, который и есть результат нашего метода
     * */
 
-     static int[] stringToArray(String s) {
-        s = s.replaceAll("[^0-9,-]", "");
+    static int[] stringToArray(String s) throws NumberFormatException {
+        if (s.matches(".*[^0-9,-]+.*")) {
+            throw new NumberFormatException();
+        }
+
         s = s.replaceAll("[,-]*$", "");
         s = s.replaceAll("-,", ",");
         s += ",";
