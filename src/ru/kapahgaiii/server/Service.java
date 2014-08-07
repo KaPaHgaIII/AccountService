@@ -45,6 +45,9 @@ public class Service implements AccountService {
             try {
                 String s = reader.readLine();
                 if (s.equals("shutdown")) {
+                    System.out.println("Выключаюсь...");
+                    registry.unbind("AccountService");
+                    UnicastRemoteObject.unexportObject(service, true);
                     break;
                 } else if (s.equals("print")) {
                     System.out.println(data);
