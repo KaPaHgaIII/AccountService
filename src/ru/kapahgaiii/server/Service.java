@@ -6,14 +6,19 @@ import ru.kapahgaiii.config.Config;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.rmi.*;
-import java.rmi.registry.*;
-import java.rmi.server.*;
-import java.util.HashMap;
-import java.util.Map;
+import java.rmi.AlreadyBoundException;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class Service implements AccountService {
-    Map<Integer, Long> data = new HashMap<Integer, Long>();
+    ConcurrentMap<Integer, AtomicLong> data = new ConcurrentHashMap<Integer, AtomicLong>();
+
     final Registry registry;
     private int requestsCount = 0;
 
@@ -28,7 +33,7 @@ public class Service implements AccountService {
     public Long getAmount(Integer id) throws RemoteException {
         requestsCount++;
         if (data.containsKey(id)) {
-            return data.get(id);
+            return data.get(id).get();
         } else {
             return (long) 0;
         }
@@ -37,11 +42,8 @@ public class Service implements AccountService {
     @Override
     public void addAmount(Integer id, Long value) throws RemoteException {
         requestsCount++;
-        if (data.containsKey(id)) {
-            data.put(id, data.get(id) + value);
-        } else {
-            data.put(id, value);
-        }
+        data.putIfAbsent(id, new AtomicLong(0));
+        data.get(id).getAndAdd(value);
     }
 
     public void run() throws Exception {
@@ -78,9 +80,9 @@ public class Service implements AccountService {
 
     public static void main(String[] args) throws Exception {
         Service service = ServiceFactory.createService();
-        if(service!=null){
+        if (service != null) {
             service.run();
-        }else{
+        } else {
             System.err.println("Could not start service");
         }
     }
