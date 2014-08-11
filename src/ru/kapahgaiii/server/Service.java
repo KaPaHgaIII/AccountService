@@ -12,21 +12,43 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.SQLException;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Service implements AccountService {
     ConcurrentMap<Integer, AtomicLong> data = new ConcurrentHashMap<Integer, AtomicLong>();
+    Set<Integer> saveSet = new CopyOnWriteArraySet<Integer>();
 
     final Registry registry;
+    final DBConnection connection;
+    final Thread DBThread;
     private int requestsCount = 0;
 
-    public Service() throws RemoteException, AlreadyBoundException {
+    public Service() throws RemoteException, AlreadyBoundException, DBException {
+
+        connection = DBConnection.createConnection();
+        data = connection.getData();
+
         System.setProperty("java.rmi.server.hostname", Config.HOST_IP);
         registry = LocateRegistry.createRegistry(Config.PORT);
         Remote stub = UnicastRemoteObject.exportObject(this, 0);
         registry.bind(Config.BINDING_NAME, stub);
+
+        DBThread = new Thread(new DBProcessor());
+        DBThread.start();
+    }
+
+    public static Service createService() {
+        try {
+            return new Service();
+        } catch (Exception e) { //Catching RemoteException, AlreadyBoundException, DBException
+            System.err.println(e.toString());
+            return null;
+        }
     }
 
     @Override
@@ -41,9 +63,13 @@ public class Service implements AccountService {
 
     @Override
     public void addAmount(Integer id, Long value) throws RemoteException {
-        requestsCount++;
+        //для MySQL
+        saveSet.add(id);
+        //делаем то, ради чего вообще вызывался метод
         data.putIfAbsent(id, new AtomicLong(0));
         data.get(id).getAndAdd(value);
+        //для статистики
+        requestsCount++;
     }
 
     public void run() throws Exception {
@@ -71,6 +97,8 @@ public class Service implements AccountService {
         try {
             registry.unbind("AccountService");
             UnicastRemoteObject.unexportObject(this, true);
+            DBThread.interrupt();
+            DBThread.join();
             System.out.println("Success");
         } catch (Exception e) { // catch RemoteException, NotBoundException, AccessException, NoSuchObjectException
             System.out.println("Failed");
@@ -79,7 +107,7 @@ public class Service implements AccountService {
     }
 
     public static void main(String[] args) throws Exception {
-        Service service = ServiceFactory.createService();
+        Service service = Service.createService();
         if (service != null) {
             service.run();
         } else {
@@ -87,4 +115,28 @@ public class Service implements AccountService {
         }
     }
 
+    private class DBProcessor implements Runnable {
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+
+                if (saveSet.size() > 0) {
+                    try {
+                        connection.save(saveSet, data);
+                    } catch (SQLException e) {
+                        System.err.println("MySQL: Could not update DB");
+                        System.err.println(e.toString());
+                    }
+                }
+                if (Thread.currentThread().isInterrupted()) {
+                    break;
+                }
+            }
+        }
+    }
 }

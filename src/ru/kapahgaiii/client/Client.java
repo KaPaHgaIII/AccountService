@@ -5,10 +5,14 @@ import org.kohsuke.args4j.CmdLineParser;
 import ru.kapahgaiii.config.Config;
 import ru.kapahgaiii.server.AccountService;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -47,19 +51,49 @@ public class Client {
 
     }
 
+    public static Client createClient(CmdArguments cmdArguments) {
+        try {
+            return new Client(cmdArguments.getrCount(), cmdArguments.getwCount(), cmdArguments.getIdList());
+        } catch (Exception e) { //Catching RemoteException, NotBoundException, NoThreadsException, ArrayEmptyException
+            System.err.println(e.toString());
+            return null;
+        }
+    }
+
     public void run() {
-        for (int i = 0; i < rCount; i++) {
+        for (int i = 0; i < rCount; i++) { //запускаем потоки читателей
             Thread reader = new Thread(new Reader());
             reader.start();
             queue.offer(reader);
         }
-        for (int i = 0; i < wCount; i++) {
+        for (int i = 0; i < wCount; i++) { //запускаем потоки писателей
             Thread writer = new Thread(new Writer());
             writer.start();
             queue.offer(writer);
         }
+        //Запуск следилку за потоками, она нам скажет, что сервер отрубился.
+        new Thread(new ThreadManager()).start();
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+        while (true) {
+            try {
+                String s = reader.readLine();
+                if (s.equals("shutdown")) {
+                    shutdown();
+                    break;
+                }
+            } catch (IOException e) {
+                break;
+            }
+        }
     }
 
+    public void shutdown() {
+        for (Thread thread : queue) {
+            thread.interrupt();
+        }
+
+    }
     private static CmdArguments getArguments(String[] args) throws CmdLineException {
         CmdArguments cmdArguments = new CmdArguments();
         CmdLineParser parser = new CmdLineParser(cmdArguments);
@@ -78,12 +112,12 @@ public class Client {
             return;
         }
         //если всё хорошо, пробуем создать клиент
-        Client client = ClientFactory.createClient(cmdArguments);
+        Client client = Client.createClient(cmdArguments);
         //если клиент создался, запускаем.
         if (client != null) {
             client.run();
         } else {
-            System.err.println("Unable to start client");
+            System.out.println("Unable to start client");
         }
 
     }
@@ -96,9 +130,15 @@ public class Client {
             while (true) {
                 try {
                     int id = idList[rand.nextInt(idList.length)];
-                    System.out.println("Reader" + readerId + " says: id " + id + " now has amount " + service.getAmount(id));
+                    Long amount = service.getAmount(id);
+                    //System.out.println("Reader" + readerId + " says: id " + id + " now has amount " + amount);
                     Thread.yield();
                 } catch (RemoteException e) {
+                    System.err.println(e.toString());
+                    Thread.currentThread().interrupt();
+                }
+                if(Thread.currentThread().isInterrupted()){
+                    queue.remove(Thread.currentThread());
                     break;
                 }
             }
@@ -114,13 +154,36 @@ public class Client {
                 try {
                     int id = idList[rand.nextInt(idList.length)];
                     Long amount = (long) (rand.nextInt(1000) - rand.nextInt(1000)); //положительное или отрицательное
-                    System.out.println("Writer" + writerId + " changes amount by " + amount + " where id= " + id);
+                    //System.out.println("Writer" + writerId + " changes amount by " + amount + " where id= " + id);
                     service.addAmount(id, amount);
                     Thread.yield();
                 } catch (RemoteException e) {
+                    System.err.println(e.toString());
+                    Thread.currentThread().interrupt();
+                }
+                if(Thread.currentThread().isInterrupted()){
+                    queue.remove(Thread.currentThread());
                     break;
                 }
             }
+        }
+    }
+
+    private class ThreadManager implements Runnable {
+        @Override
+        public void run() {
+            System.out.println("Client started: ");
+            System.out.println("rCount: "+rCount);
+            System.out.println("wCount: "+wCount);
+            System.out.println("IdList: "+ Arrays.toString(idList));
+            while (!queue.isEmpty()) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {
+                }
+                Thread.yield();
+            }
+            System.out.println("Client stopped.");
         }
     }
 }
