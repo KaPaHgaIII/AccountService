@@ -1,6 +1,5 @@
 package ru.kapahgaiii.server;
 
-
 import ru.kapahgaiii.config.Config;
 
 import java.io.BufferedReader;
@@ -13,6 +12,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,10 +23,14 @@ public class Service implements AccountService {
     ConcurrentMap<Integer, AtomicLong> data = new ConcurrentHashMap<Integer, AtomicLong>();
     Set<Integer> saveSet = new HashSet<Integer>();
 
-    final Registry registry;
-    final DBConnection connection;
-    final Thread DBThread;
-    private int requestsCount = 0;
+    final private Registry registry;
+    final private DBConnection connection;
+    final private Thread DBThread;
+
+    private int readRequestsCount = 0;
+    private int writeRequestsCount = 0;
+
+    private Calendar statsStartTime;
 
     public Service() throws RemoteException, AlreadyBoundException, DBException {
 
@@ -37,6 +41,8 @@ public class Service implements AccountService {
         registry = LocateRegistry.createRegistry(Config.PORT);
         Remote stub = UnicastRemoteObject.exportObject(this, 0);
         registry.bind(Config.BINDING_NAME, stub);
+
+        statsStartTime = Calendar.getInstance();
 
         DBThread = new Thread(new DBProcessor());
         DBThread.start();
@@ -53,7 +59,9 @@ public class Service implements AccountService {
 
     @Override
     public Long getAmount(Integer id) throws RemoteException {
-        requestsCount++;
+        //для статистики
+        readRequestsCount++;
+        //делаем то, ради чего вообще вызывался метод
         if (data.containsKey(id)) {
             return data.get(id).get();
         } else {
@@ -69,7 +77,7 @@ public class Service implements AccountService {
         data.putIfAbsent(id, new AtomicLong(0));
         data.get(id).getAndAdd(value);
         //для статистики
-        requestsCount++;
+        writeRequestsCount++;
     }
 
     public void run() throws Exception {
@@ -81,15 +89,32 @@ public class Service implements AccountService {
                 if (s.equals("shutdown")) {
                     shutdown();
                     break;
-                } else if (s.equals("print")) {
-                    System.out.println(data);
-                } else if (s.equals("how much?")) {
-                    System.out.println(requestsCount);
+                } else if (s.equals("show statistics")) {
+                    printStatistics();
+                } else if (s.equals("reset statistics")) {
+                    resetStatistics();
                 }
             } catch (IOException e) {
                 break;
             }
         }
+    }
+
+    public void printStatistics() {
+        long delay = (Calendar.getInstance().getTimeInMillis() - statsStartTime.getTimeInMillis()) / 1000;
+        System.out.print("getAmount requests per second: ");
+        System.out.println(readRequestsCount / delay);
+        System.out.print("addAmount requests per second: ");
+        System.out.println(writeRequestsCount / delay);
+        System.out.print("Requests total: ");
+        System.out.println(writeRequestsCount + readRequestsCount);
+    }
+
+    public void resetStatistics() {
+        statsStartTime = Calendar.getInstance();
+        readRequestsCount = 0;
+        writeRequestsCount = 0;
+        System.out.println("Statistics was reset.");
     }
 
     public void shutdown() {
