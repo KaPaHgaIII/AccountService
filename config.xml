@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <entry key="service.port">4568</entry>
+    <entry key="service.host_ip">localhost</entry>
+    <entry key="service.binding_name">AccountService</entry>
+    <entry key="jdbc.user">service_user</entry>
+    <entry key="jdbc.pass">testpass</entry>
+    <entry key="jdbc.url">jdbc:mysql://localhost/account_service</entry>
+</properties>
