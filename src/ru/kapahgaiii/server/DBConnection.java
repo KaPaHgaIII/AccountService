@@ -53,6 +53,7 @@ public class DBConnection {
 
     public void save(Set<Integer> saveSet, ConcurrentMap<Integer, AtomicLong> data ) throws SQLException {
         Statement s = conn.createStatement();
+
         Iterator<Integer> it = saveSet.iterator();
         String values = "";
 
@@ -62,7 +63,6 @@ public class DBConnection {
             if (it.hasNext()) {
                 values += ",";
             }
-            saveSet.remove(id);
         }
 
         s.executeUpdate("INSERT INTO accounts (id, amount) VALUES "+values+

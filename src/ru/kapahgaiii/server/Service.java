@@ -13,15 +13,15 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.sql.SQLException;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Service implements AccountService {
     ConcurrentMap<Integer, AtomicLong> data = new ConcurrentHashMap<Integer, AtomicLong>();
-    Set<Integer> saveSet = new CopyOnWriteArraySet<Integer>();
+    Set<Integer> saveSet = new HashSet<Integer>();
 
     final Registry registry;
     final DBConnection connection;
@@ -118,22 +118,30 @@ public class Service implements AccountService {
     private class DBProcessor implements Runnable {
         @Override
         public void run() {
+            Boolean interrupted = false; //этот флаг нужен чтобы не потерять данные
             while (true) {
                 try {
                     Thread.sleep(10000);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 }
+                if (Thread.currentThread().isInterrupted()) {
+                    interrupted = true;
+                }
 
                 if (saveSet.size() > 0) {
                     try {
-                        connection.save(saveSet, data);
+                        Set<Integer> completeSaveSet = saveSet; //сейчас есть 2 ссылки на мой сет
+                        saveSet = new HashSet<Integer>(); //новый айдишники теперь будут сохранятся в новый сет
+                        connection.save(completeSaveSet, data); //спокойно работаем со старым сетом
                     } catch (SQLException e) {
                         System.err.println("MySQL: Could not update DB");
                         System.err.println(e.toString());
                     }
                 }
-                if (Thread.currentThread().isInterrupted()) {
+                //Thread.currentThread().isInterrupted()
+                //Такую проверку нельзя выполнить тут, потому что тогда есть шанс, что потеряется часть данных.
+                if (interrupted) {
                     break;
                 }
             }

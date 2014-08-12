@@ -74,18 +74,10 @@ public class Client {
         //Запуск следилку за потоками, она нам скажет, что сервер отрубился.
         new Thread(new ThreadManager()).start();
 
-        BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
-        while (true) {
-            try {
-                String s = reader.readLine();
-                if (s.equals("shutdown")) {
-                    shutdown();
-                    break;
-                }
-            } catch (IOException e) {
-                break;
-            }
-        }
+        //Запуск читателя команд с консоли
+        Thread commandReader = new Thread(new CommandReader());
+        commandReader.setDaemon(true);
+        commandReader.start();
     }
 
     public void shutdown() {
@@ -94,6 +86,7 @@ public class Client {
         }
 
     }
+
     private static CmdArguments getArguments(String[] args) throws CmdLineException {
         CmdArguments cmdArguments = new CmdArguments();
         CmdLineParser parser = new CmdLineParser(cmdArguments);
@@ -184,6 +177,24 @@ public class Client {
                 Thread.yield();
             }
             System.out.println("Client stopped.");
+        }
+    }
+
+    private class CommandReader implements Runnable {
+        @Override
+        public void run() {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+            while (true) {
+                try {
+                    String s = reader.readLine();
+                    if (s.equals("shutdown")) {
+                        shutdown();
+                        break;
+                    }
+                } catch (IOException e) {
+                    break;
+                }
+            }
         }
     }
 }
