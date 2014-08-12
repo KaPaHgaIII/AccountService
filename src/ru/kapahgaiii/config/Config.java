@@ -5,7 +5,6 @@ import java.util.Properties;
 
 public class Config {
     public static int PORT;
-    //final public static String HOST_IP = "178.62.30.124";
     public static String HOST_IP;
     public static String BINDING_NAME;
 

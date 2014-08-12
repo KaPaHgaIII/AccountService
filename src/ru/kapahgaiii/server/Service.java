@@ -20,16 +20,18 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class Service implements AccountService {
+    //ConcurrentMap и AtomicLong обеспечат нам потокобезопасность
     ConcurrentMap<Integer, AtomicLong> data = new ConcurrentHashMap<Integer, AtomicLong>();
+    //сет с изменёнными ключами, нужен чтобы не обновлять каждый раз все строки в таблице
     Set<Integer> saveSet = new HashSet<Integer>();
 
     final private Registry registry;
     final private DBConnection connection;
     final private Thread DBThread;
 
+    //для статистики
     private int readRequestsCount = 0;
     private int writeRequestsCount = 0;
-
     private Calendar statsStartTime;
 
     public Service() throws RemoteException, AlreadyBoundException, DBException {
@@ -80,8 +82,9 @@ public class Service implements AccountService {
         writeRequestsCount++;
     }
 
+    // взаимодействие с сервером через консоль
+    // понимает команды shutdown, show statistics, reset statistics
     public void run() throws Exception {
-
         BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
         while (true) {
             try {
@@ -140,6 +143,7 @@ public class Service implements AccountService {
         }
     }
 
+    //класс, сохряняющий данные в базу данных
     private class DBProcessor implements Runnable {
         @Override
         public void run() {

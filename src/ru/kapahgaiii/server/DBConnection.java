@@ -4,14 +4,12 @@ import ru.kapahgaiii.config.Config;
 
 import java.sql.*;
 import java.util.Iterator;
-import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class DBConnection {
-    Random random = new Random();
     private Connection conn = null;
 
     public DBConnection() throws SQLException {
@@ -27,6 +25,7 @@ public class DBConnection {
         }
     }
 
+    //метод для загрузки данных из базы данных при старте клиента
     public ConcurrentMap<Integer, AtomicLong> getData() {
         ConcurrentMap<Integer, AtomicLong> data = new ConcurrentHashMap<Integer, AtomicLong>();
 
@@ -51,6 +50,7 @@ public class DBConnection {
 
     }
 
+    //метод сохранения данных в бд
     public void save(Set<Integer> saveSet, ConcurrentMap<Integer, AtomicLong> data ) throws SQLException {
         Statement s = conn.createStatement();
 
@@ -69,19 +69,4 @@ public class DBConnection {
                 " ON DUPLICATE KEY UPDATE amount=VALUES(amount)");
     }
 
-
-    /*public static void main(String[] args) throws Exception {
-        DBConnection connection = DBConnection.createConnection();
-        Set<Integer> set = new CopyOnWriteArraySet<Integer>();
-        set.add(3);
-        set.add(4);
-
-        ConcurrentMap<Integer, AtomicLong> data = new ConcurrentHashMap<Integer, AtomicLong>();
-        data.put(3,new AtomicLong(333));
-        data.put(4,new AtomicLong(444));
-
-        System.out.println(set);
-        connection.save(set, data);
-        System.out.println(set);
-    }*/
 }
