@@ -25,9 +25,9 @@
 
 ### Компиляция (пример для linux)
 
-javac -d bin src/ru/kapahgaiii/config/*.java  
-javac -d bin -cp ./bin src/ru/kapahgaiii/server/*.java  
-javac -d bin -cp ./bin:./lib/args4j-2.0.21.jar src/ru/kapahgaiii/client/*.java
+javac -d bin src/ru/kapahgaiii/config/\*.java  
+javac -d bin -cp ./bin src/ru/kapahgaiii/server/\*.java  
+javac -d bin -cp ./bin:./lib/args4j-2.0.21.jar src/ru/kapahgaiii/client/\*.java
 
 ### Запуск 
 
