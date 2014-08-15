@@ -39,6 +39,10 @@ public class Service implements AccountService {
         connection = DBConnection.createConnection();
         data = connection.getData();
 
+        if(data == null) {
+            throw new DBException();
+        }
+
         System.setProperty("java.rmi.server.hostname", Config.HOST_IP);
         registry = LocateRegistry.createRegistry(Config.PORT);
         Remote stub = UnicastRemoteObject.exportObject(this, 0);

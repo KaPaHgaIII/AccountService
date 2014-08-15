@@ -30,6 +30,15 @@ public class DBConnection {
         ConcurrentMap<Integer, AtomicLong> data = new ConcurrentHashMap<Integer, AtomicLong>();
 
         try {
+            //нужно создать таблицу, если её ещё нет.
+            Statement s = conn.createStatement();
+            s.executeUpdate("CREATE TABLE IF NOT EXISTS accounts (" +
+                    "  id int(5) NOT NULL AUTO_INCREMENT," +
+                    "  amount bigint(20) NOT NULL," +
+                    "  PRIMARY KEY (id)" +
+                    ") ENGINE=InnoDB  DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;");
+
+            //вытаскиваем данные
             PreparedStatement pstmt = conn.prepareStatement("SELECT id, amount FROM accounts;");
 
             if (pstmt.execute()) {
